@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BioPulse Vision</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:#000;color:#ff2a6d;font-family:monospace;overflow:hidden}
+  #loader{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;z-index:10;transition:opacity .8s}
+  #loader svg{width:120px;animation:pulse 1.2s infinite}
+  #loader p{margin-top:16px;letter-spacing:4px;font-size:12px}
+  @keyframes pulse{0%,100%{transform:scale(1);filter:drop-shadow(0 0 4px #ff2a6d)}
+    50%{transform:scale(1.15);filter:drop-shadow(0 0 16px #ff2a6d)}}
+  #cam{position:fixed;inset:0;width:100%;height:100%;object-fit:cover}
+  #top{position:fixed;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 10px) 12px 10px;
+    background:rgba(0,0,0,.55);display:flex;align-items:center;gap:8px;font-size:13px;letter-spacing:2px}
+  #dot{width:10px;height:10px;border-radius:50%;background:#f00;animation:blink 1s infinite}
+  @keyframes blink{50%{opacity:.15}}
+  #bottom{position:fixed;bottom:0;left:0;right:0;padding:10px 12px calc(env(safe-area-inset-bottom) + 14px);
+    background:rgba(0,0,0,.6)}
+  #ecg{width:100%;height:90px;display:block}
+  #btn{width:100%;margin-top:10px;padding:16px;background:#000;color:#ff2a6d;
+    border:2px solid #ff2a6d;border-radius:10px;font-family:monospace;font-size:14px;
+    letter-spacing:2px;box-shadow:0 0 12px #ff2a6d inset,0 0 12px #ff2a6d}
+  #msg{position:fixed;top:50%;left:0;right:0;text-align:center;padding:20px;font-size:13px}
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <svg viewBox="0 0 100 60" fill="none" stroke="#ff2a6d" stroke-width="3">
+    <path d="M5 30 Q50 -5 95 30 Q50 65 5 30Z"/>
+    <circle cx="50" cy="30" r="10"/>
+    <path d="M10 30 H35 L40 20 L46 40 L52 25 L56 30 H90" stroke="#ff00aa" stroke-width="2"/>
+  </svg>
+  <p>BIOPULSE VISION</p>
+</div>
+
+<video id="cam" autoplay playsinline muted></video>
+<div id="msg"></div>
+
+<div id="top"><div id="dot"></div><span>BIO-SCANNER : ACTIF</span></div>
+
+<div id="bottom">
+  <canvas id="ecg"></canvas>
+  <button id="btn">ACTIVER L'AMPLIFICATION DU SANG</button>
+</div>
+
+<script>
+// --- Caméra ---
+const video = document.getElementById('cam');
+async function startCamera(){
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:'user', width:{ideal:640}, height:{ideal:480}}, audio:false});
+    video.srcObject = stream;
+  }catch(e){
+    document.getElementById('msg').textContent = "Caméra refusée ou indisponible : " + e.message;
+  }
+}
+
+// --- Écran de chargement ---
+setTimeout(()=>{
+  const l = document.getElementById('loader');
+  l.style.opacity = 0;
+  setTimeout(()=>l.remove(), 800);
+  startCamera();
+}, 2000);
+
+// --- Graphique (ligne de test pour l'instant) ---
+const c = document.getElementById('ecg'), ctx = c.getContext('2d');
+function resize(){ c.width = c.clientWidth*2; c.height = c.clientHeight*2; }
+resize(); addEventListener('resize', resize);
+const data = new Array(200).fill(0.5);
+function draw(){
+  data.push(0.5 + Math.sin(Date.now()/200)*0.05); data.shift();
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.strokeStyle = '#ff2a6d'; ctx.lineWidth = 3;
+  ctx.shadowColor = '#ff2a6d'; ctx.shadowBlur = 10;
+  ctx.beginPath();
+  data.forEach((v,i)=>{
+    const x = i/(data.length-1)*c.width, y = v*c.height;
+    i ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
+  });
+  ctx.stroke();
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>
